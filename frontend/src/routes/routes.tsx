@@ -5,7 +5,7 @@ import {
 
 export const router = createBrowserRouter([
   {
-    path: `${import.meta.env.BASE_URL}/`,
+    path: `${import.meta.env.BASE_URL}`,
     element: (
       <App/>
     ),

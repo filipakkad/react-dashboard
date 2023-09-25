@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { queryTable } from "queries/fetch-table.query";
 import { DataTable } from "./components/data-table/data-table";
 import {
+	AutoComplete,
 	Button,
 	Divider,
 	Layout,
@@ -29,11 +30,13 @@ const FilterDropdowns = ({
 	onChange,
 	onRemove,
 	value,
+	isLoading
 }: {
 	columns: ColNames;
 	onChange: (filter: { id: string; filter: FilterDTO }) => void;
 	value: FilterDTO;
 	onRemove: (id: string) => void;
+	isLoading: boolean;
 }) => {
 	const { id } = value;
 	const onFilter = (changeState: Partial<FilterDTO>) => {
@@ -53,6 +56,7 @@ const FilterDropdowns = ({
 					value: column.id,
 				}))}
 				size="middle"
+				disabled={isLoading}
 			/>
 			<Select
 				value={value?.filterOption}
@@ -64,6 +68,7 @@ const FilterDropdowns = ({
 					{ label: "not contains", value: FilterOption.notContains },
 				]}
 				size="middle"
+				disabled={isLoading}
 			/>
 			<Select
 				value={value.filterValue}
@@ -73,6 +78,7 @@ const FilterDropdowns = ({
 				placeholder="Values"
 				size="middle"
 				tokenSeparators={[",", " ", "\t"]}
+				disabled={isLoading}
 			/>
 			<div className="w-min">
 				<Button
@@ -81,6 +87,7 @@ const FilterDropdowns = ({
 					type="dashed"
 					icon={<CloseCircleOutlined />}
 					size="middle"
+					disabled={isLoading}
 				/>
 			</div>
 		</div>
@@ -94,6 +101,7 @@ function App() {
 	);
 	const [filters, setFilters] = React.useState<FilterDTO[]>(appliedFilters);
 	const [tableName, setTableName] = useSearchParamsState<string>("table", "");
+	const [localTableName, setLocalTableName] = React.useState<string>(tableName || "");
 	const [pagination, setPagination] = useSearchParamsState("pagination", {
 		page: 1,
 		perPage: 100,
@@ -111,7 +119,7 @@ function App() {
 		refetchOnWindowFocus: false,
 		enabled: !!tableName && !!pagination.page && !!pagination.perPage,
 	});
-	const { data: tablesList, isLoading: isLoadingTableList, isFetching: isFetchingTableList } = useQuery(queryTablesList);
+	const { data: tablesList } = useQuery(queryTablesList);
 	const { columns, count } = data || {};
 
 	const resetFilters = () => {
@@ -169,9 +177,10 @@ function App() {
 				<Layout>
 					<Sider collapsed={isCollapsed} onCollapse={() => setIsCollapsed((prev) => !prev)} collapsible width={500} className="h-full fixed left-0 top-0 bottom-0 overflow-auto" theme='light'>
 						<div className={clsx('flex flex-col gap-4 p-8 transition-all w-[500px] absolute right-0 top-0')}>
-							<Select
-								value={tableName}
-								onChange={onTableChange}
+							<AutoComplete
+								onSelect={onTableChange}
+								value={localTableName}
+								onChange={(value) => setLocalTableName(value)}
 								className="w-full"
 								placeholder="Select table"
 								options={tablesList?.map((table) => ({
@@ -179,8 +188,10 @@ function App() {
 									value: table,
 								}))}
 								size="large"
-								loading={isLoadingTableList || isFetchingTableList}
 								disabled={isFetching}
+								filterOption={(inputValue, option) =>
+									option!.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+								}
 							/>
 							{isSuccess && columns &&
 								filters.map((filter) => {
@@ -191,6 +202,7 @@ function App() {
 											value={filter}
 											onChange={onFilterChange}
 											columns={columns}
+											isLoading={isLoading || isFetching}
 										/>
 									);
 								})}
@@ -201,6 +213,7 @@ function App() {
 									type="dashed"
 									icon={<PlusCircleOutlined />}
 									size="large"
+									disabled={isLoading || isFetching}
 								>
 									Add filter
 								</Button>

@@ -17,7 +17,7 @@ buildQuery <- function(dt, filters, page = NULL, page_size = NULL) {
   paginated_dt <- dt
   if(!is.null(page) && !is.null(page_size)) {
     paginated_dt <- dt %>%
-      mutate(row_num = row_number()) %>%
+      mutate(row_num = row_number(0)) %>%
       filter(row_num > (page - 1) * page_size, row_num <= page * page_size) %>%
       select(-row_num)
   }

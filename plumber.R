@@ -62,9 +62,12 @@ function(req) {
   return(list(
     data = queries$paginated_dt %>% collect(),
     count = (queries$unpaginated_tbl %>% summarise(n = n()) %>% pull(n)),
-    columns = as_tibble(
-      (dbGetQuery(con, sprintf("PRAGMA table_info(%s)", table)))
-    ) %>% select(name, type) %>% mutate(id = name)
+    columns = names(dt) %>% purrr::map(function(name) {
+      list(
+        id = name,
+        name = name
+      )
+    })
   ))
 }
 

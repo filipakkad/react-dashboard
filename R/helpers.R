@@ -26,3 +26,16 @@ buildQuery <- function(dt, filters, page = NULL, page_size = NULL) {
     unpaginated_tbl=dt
   ))
 }
+
+withDbConnection <- function(cb) {
+  # Establish the database connection
+  con <- dbConnect(RSQLite::SQLite(), "db/local_db.sqlite")
+
+  result = cb(con)
+
+  on.exit({
+    dbDisconnect(con)
+  })
+
+  return(result)
+}

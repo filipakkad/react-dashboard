@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from "axios";
 import { objectFiltersToStringArray } from "./utils";
 
 const fetchTable = async ({ filters, tableName, page, perPage }: { filters: FilterDTO[], tableName?: string, page: number, perPage: number }) => {
-  const { data } =  await axios.post(`${import.meta.env.BASE_URL}/api/data`, { table: tableName, filters, page, perPage }) as AxiosResponse<TableData>;
+  const { data } =  await axios.post(`${import.meta.env.BASE_URL}api/data`, { table: tableName, filters, page, perPage }) as AxiosResponse<TableData>;
   return data;
 }
 

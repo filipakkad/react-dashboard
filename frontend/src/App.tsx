@@ -100,7 +100,7 @@ function App() {
 	});
 	const [isCollapsed, setIsCollapsed] = useSearchParamsState<boolean>('collapsed', false);
 
-	const { data, isLoading, isSuccess } = useQuery({
+	const { data, isLoading, isSuccess, isFetching } = useQuery({
 		...queryTable({
 			filters: Object.values(appliedFilters),
 			tableName,
@@ -228,7 +228,7 @@ function App() {
 											},
 										})
 									}
-								>{`Export (${count} rows)`}</Button>
+								>{`Export (${count ?? 0} rows)`}</Button>
 							</div>
 						</div>
 					</Sider>
@@ -238,7 +238,7 @@ function App() {
 								{data && (
 									<div className="flex flex-col items-center w-full gap-4 h-full">
 										<DataTable
-											isLoading={isLoading}
+											isLoading={isLoading || isFetching}
 											tableData={data}
 											footer={
 												<div className="flex flex-col gap-1">

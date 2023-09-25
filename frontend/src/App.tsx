@@ -111,7 +111,7 @@ function App() {
 		refetchOnWindowFocus: false,
 		enabled: !!tableName && !!pagination.page && !!pagination.perPage,
 	});
-	const { data: tablesList, isLoading: isLoadingTableList } = useQuery(queryTablesList);
+	const { data: tablesList, isLoading: isLoadingTableList, isFetching: isFetchingTableList } = useQuery(queryTablesList);
 	const { columns, count } = data || {};
 
 	const resetFilters = () => {
@@ -179,7 +179,8 @@ function App() {
 									value: table,
 								}))}
 								size="large"
-								loading={isLoadingTableList}
+								loading={isLoadingTableList || isFetchingTableList}
+								disabled={isFetching}
 							/>
 							{isSuccess && columns &&
 								filters.map((filter) => {
@@ -210,6 +211,8 @@ function App() {
 									size="large"
 									onClick={onFilter}
 									type="primary"
+									loading={isLoading || isFetching}
+									disabled={isLoading || isFetching}
 								>
 									Apply
 								</Button>
@@ -218,6 +221,7 @@ function App() {
 							<div className="w-full justify-end flex">
 								<Button
 									icon={<DownloadOutlined />}
+									disabled={isLoading || isFetching}
 									onClick={() =>
 										downloadFile({
 											params: {

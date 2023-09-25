@@ -111,7 +111,7 @@ function App() {
 		refetchOnWindowFocus: false,
 		enabled: !!tableName && !!pagination.page && !!pagination.perPage,
 	});
-	const { data: tablesList } = useQuery(queryTablesList);
+	const { data: tablesList, isLoading: isLoadingTableList } = useQuery(queryTablesList);
 	const { columns, count } = data || {};
 
 	const resetFilters = () => {
@@ -179,6 +179,7 @@ function App() {
 									value: table,
 								}))}
 								size="large"
+								loading={isLoadingTableList}
 							/>
 							{isSuccess && columns &&
 								filters.map((filter) => {

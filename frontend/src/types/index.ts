@@ -11,8 +11,8 @@ export type TableData = {
 }
 
 export enum FilterOption {
-  contains = "contains",
-  notContains = "notContains",
+  containsExactly = "containsExactly",
+  notContainsExactly = "notContainsExactly",
 }
 
 export type FilterDTO = {

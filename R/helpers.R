@@ -7,10 +7,10 @@ buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con) {
     filterValue <- args$filterValue
 
     if(columnId %in% names(dt) && length(filterValue) > 0) {
-      if(filterOption == "notContains") {
-        dt <<- dt %>% dplyr::filter(!(!!sym(columnId) %like% glue::glue("%{filterValue}%")))
-      } else if(filterOption == "contains") {
-        dt <<- dt %>% dplyr::filter((!!sym(columnId) %like% glue::glue("%{filterValue}%")))
+      if(filterOption == "notContainsExactly") {
+        dt <<- dt %>% dplyr::filter(!(!!sym(columnId) %in% filterValue))
+      } else if(filterOption == "containsExactly") {
+        dt <<- dt %>% dplyr::filter((!!sym(columnId) %in% filterValue))
       }
     }
   })

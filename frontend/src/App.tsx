@@ -65,8 +65,8 @@ const FilterDropdowns = ({
 				className="w-full"
 				placeholder="Filter type"
 				options={[
-					{ label: "contains", value: FilterOption.contains },
-					{ label: "not contains", value: FilterOption.notContains },
+					{ label: "contains exactly", value: FilterOption.containsExactly },
+					{ label: "not contains exactly", value: FilterOption.notContainsExactly },
 				]}
 				size="middle"
 				disabled={isLoading}

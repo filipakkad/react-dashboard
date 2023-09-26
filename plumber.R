@@ -42,7 +42,7 @@ function() {
 #* @param req JSON containing filenames
 #* @serializer unboxedJSON
 function(req) {
-  withDbConnection(function(con) {
+  withLocalDb(function(con) {
     table <- req$args$table
     filters <- req$args$filters
     page <- as.integer(req$args$page)
@@ -85,7 +85,7 @@ function(req, res) {
   filters <- req$args$params$filters
   filename <- file.path(tempdir(), glue::glue("{table}.csv"))
 
-  dt <- withDbConnection(function(con) {
+  dt <- withLocalDb(function(con) {
     query <- buildQuery(table, filters, con = con)
     dbGetQuery(con, query$unpaginated_tbl)
   })

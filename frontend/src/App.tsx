@@ -119,7 +119,11 @@ function App() {
 		refetchOnWindowFocus: false,
 		enabled: !!tableName && !!pagination.page && !!pagination.perPage,
 	});
-	const { data: tablesList } = useQuery(queryTablesList);
+	const { data: tablesList } = useQuery({
+		...queryTablesList,
+		refetchOnWindowFocus: false,
+		keepPreviousData: true,
+	});
 	const { columns, count } = data || {};
 	const refCount = useRef(count);
 

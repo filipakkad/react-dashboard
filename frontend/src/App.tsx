@@ -10,7 +10,7 @@ import {
 	Pagination,
 	Select,
 } from "antd";
-import React from "react";
+import React, { useRef } from "react";
 import {
 	PlusCircleOutlined,
 	CloseCircleOutlined,
@@ -121,6 +121,19 @@ function App() {
 	});
 	const { data: tablesList } = useQuery(queryTablesList);
 	const { columns, count } = data || {};
+	const refCount = useRef(count);
+
+	React.useEffect(() => {
+		if (count !== undefined && count !== null && refCount.current !== count) {
+			refCount.current = count;
+			setPagination((currPagination) => {
+				if(currPagination.page > 1) {
+					return { ...currPagination, page: 1 }
+				}
+				return currPagination;
+			})
+		}
+	}, [count, setPagination]);
 
 	const resetFilters = () => {
 		setFilters([]);
@@ -261,13 +274,13 @@ function App() {
 												<div className="flex flex-col gap-1">
 													<Pagination
 														total={count}
-														defaultPageSize={pagination.perPage}
+														pageSize={pagination.perPage}
 														disabled={isLoading}
 														onChange={(page, pageSize) => {
 															setPagination({ page, perPage: pageSize });
 														}}
 														pageSizeOptions={[5, 10, 20, 50]}
-														defaultCurrent={pagination.page}
+														current={pagination.page}
 														className="w-full flex justify-center flex-nowrap"
 													/>
 												</div>

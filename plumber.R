@@ -16,8 +16,9 @@ cors <- function(req, res) {
   res$setHeader("Access-Control-Allow-Origin", "*")
 
   if (req$REQUEST_METHOD == "OPTIONS") {
-    res$setHeader("Access-Control-Allow-Methods","*")
-    res$setHeader("Access-Control-Allow-Headers", req$HTTP_ACCESS_CONTROL_REQUEST_HEADERS)
+    res$setHeader("Access-Control-Allow-Methods", "*")
+    res$setHeader("Access-Control-Allow-Headers",
+                  req$HTTP_ACCESS_CONTROL_REQUEST_HEADERS)
     res$status <- 200
     return(list())
   } else {
@@ -32,7 +33,8 @@ list()
 function() {
   future_promise({
     withDbConnection(function(con) {
-      DBI::dbListTables(con)
+      # dbGetQuery(con, "SHOW TABLES;")$tableName
+      dbListTables(con)
     })
   })
 }
@@ -43,33 +45,37 @@ function() {
 #* @serializer unboxedJSON
 function(req) {
   future_promise({
-    withDbConnection(function(con) {
-      table <- req$args$table
-      filters <- req$args$filters
-      page <- as.integer(req$args$page)
-      per_page <- as.integer(req$args$perPage)
+  withDbConnection(function(con) {
+    table <- req$args$table
+    filters <- req$args$filters
+    page <- as.integer(req$args$page)
+    per_page <- as.integer(req$args$perPage)
+    if (is.na(page) ||
+        is.na(per_page) || page <= 0 || per_page <= 0) {
+      res$status <- 400
+      return(list(error = "Invalid parameters. Please provide valid page and per_page values."))
+    }
 
-      if (is.na(page) || is.na(per_page) || page <= 0 || per_page <= 0) {
-        res$status <- 400
-        return(list(error = "Invalid parameters. Please provide valid page and per_page values."))
+    withDbConnection(function(serverCon) {
+      localTables <- DBI::dbListTables(con)
+      if (!(table %in% localTables)) {
+        print("Copying")
+        copy_to(con,
+                tbl(serverCon, table) %>% collect(),
+                table,
+                temporary = FALSE)
       }
-
-      # Calculate the offset and limit for pagination
-
-      dt <- tbl(con, table)
-      queries <- buildQuery(dt, filters, page, per_page)
-
-      result = list(
-        data = queries$paginated_dt %>% collect(),
-        count = (queries$unpaginated_tbl %>% summarise(n = n()) %>% pull(n)),
-        columns = names(dt) %>% purrr::map(function(name) {
-          list(
-            id = name,
-            name = name
-          )
-        })
-      )
-      result
+    })
+    queries <- buildQuery(table, filters, page, per_page, con)
+    result = list(
+      data = queries$paginated_dt %>% collect(),
+      count = (queries$unpaginated_tbl %>% summarise(n = n()) %>% pull(n)),
+      columns = names(queries$unpaginated_tbl) %>% purrr::map(function(name) {
+        list(id = name,
+             name = name)
+      })
+    )
+    result
     })
   })
 }
@@ -77,22 +83,17 @@ function(req) {
 
 #* @post /api/download
 function(req, res) {
-
-    table <- req$args$params$table
-    filters <- req$args$params$filters
-    filename <- file.path(tempdir(), glue::glue("{table}.csv"))
-
+  table <- req$args$params$table
+  filters <- req$args$params$filters
+  filename <- file.path(tempdir(), glue::glue("{table}.csv"))
 
   future_promise({
     withDbConnection(function(con) {
-      dt <- tbl(con, table)
-      query <- buildQuery(dt, filters)
+      query <- buildQuery(table, filters)
       query$unpaginated_tbl %>% collect()
     })
   }) %...>% (function(dt) {
-      write.csv(dt, filename, row.names = FALSE)
-      include_file(filename, res, "text/csv")
-    })
+    write.csv(dt, filename, row.names = FALSE)
+    include_file(filename, res, "text/csv")
+  })
 }
-
-

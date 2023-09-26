@@ -1,4 +1,5 @@
-buildQuery <- function(dt, filters, page = NULL, page_size = NULL) {
+buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con) {
+  dt <- tbl(con, tableName)
   purrr::pwalk(filters, function(...) {
     args <- list(...)
     columnId <- args$columnId
@@ -29,13 +30,19 @@ buildQuery <- function(dt, filters, page = NULL, page_size = NULL) {
 
 withDbConnection <- function(cb) {
   # Establish the database connection
-  con <- dbConnect(RSQLite::SQLite(), "db/local_db.sqlite")
-
+  con <- dbConnect(RSQLite::SQLite(), "db/local_server_db.sqlite")
   result = cb(con)
-
   on.exit({
     dbDisconnect(con)
   })
+  return(result)
+}
 
+withLocalDb <- function(cb) {
+  con <- dbConnect(RSQLite::SQLite(), "db/local_db.sqlite")
+  result = cb(con)
+  on.exit({
+    dbDisconnect(con)
+  })
   return(result)
 }

@@ -15,6 +15,7 @@ import {
 	PlusCircleOutlined,
 	CloseCircleOutlined,
 	DownloadOutlined,
+	ArrowRightOutlined,
 } from "@ant-design/icons";
 import { ColNames, FilterDTO, FilterOption } from "./types";
 import { v4 as uuidv4 } from "uuid";
@@ -243,6 +244,7 @@ function App() {
 									type="primary"
 									loading={isLoading || isFetching}
 									disabled={isLoading || isFetching}
+									icon={<ArrowRightOutlined />}
 								>
 									Apply
 								</Button>

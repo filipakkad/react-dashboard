@@ -6,25 +6,23 @@ buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con) {
     filterOption <- args$filterOption
     filterValue <- args$filterValue
 
-    if(columnId %in% names(dt)) {
+    if(columnId %in% names(dt) && length(filterValue) > 0) {
       if(filterOption == "notContains") {
-        dt <<- dt %>% dplyr::filter(!(!!sym(columnId) %in% filterValue))
+        dt <<- dt %>% dplyr::filter(!(!!sym(columnId) %like% glue::glue("%{filterValue}%")))
       } else if(filterOption == "contains") {
-        dt <<- dt %>% dplyr::filter((!!sym(columnId) %in% filterValue))
+        dt <<- dt %>% dplyr::filter((!!sym(columnId) %like% glue::glue("%{filterValue}%")))
       }
     }
   })
 
-  paginated_dt <- dt
+  paginated_dt <- sql_render(dt)
   if(!is.null(page) && !is.null(page_size)) {
-    paginated_dt <- dt %>%
-      mutate(row_num = row_number(0)) %>%
-      filter(row_num > (page - 1) * page_size, row_num <= page * page_size) %>%
-      select(-row_num)
+    paginated_dt <- glue::glue("SELECT * FROM ({paginated_dt}) LIMIT {page_size} OFFSET {(page - 1) * page_size};")
   }
   return(list(
     paginated_dt=paginated_dt,
-    unpaginated_tbl=dt
+    unpaginated_tbl=sql_render(dt),
+    totalCount=dt %>% summarise(n = n()) %>% pull(n)
   ))
 }
 

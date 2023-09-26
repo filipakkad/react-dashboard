@@ -1,5 +1,5 @@
 import { Data, TableData } from '@/types';
-import { Table } from 'antd';
+import { Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 type DataTableProps = {
@@ -12,9 +12,15 @@ export const DataTable = (props: DataTableProps) => {
   const { tableData, isLoading, footer } = props;
   const { data, columns } = tableData;
   const preparedColumns: ColumnsType<Data> = columns.map((column) => ({
-    title: column.name,
+    title: (
+      <Typography.Text ellipsis={true}>
+        {column.name}
+      </Typography.Text>
+    ),
     dataIndex: column.id,
     key: column.id,
+    ellipsis: true,
+    responsive: ['md'],
   }));
 
   return (

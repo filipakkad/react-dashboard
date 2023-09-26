@@ -89,7 +89,7 @@ function(req, res) {
 
   future_promise({
     withDbConnection(function(con) {
-      query <- buildQuery(table, filters)
+      query <- buildQuery(table, filters, con = con)
       query$unpaginated_tbl %>% collect()
     })
   }) %...>% (function(dt) {

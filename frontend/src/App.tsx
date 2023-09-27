@@ -102,7 +102,6 @@ const FilterDropdowns = ({
 function App() {
 	const [tableConfig, setTableConfig] = useSearchParamsState('config', {
 		appliedFilters: [] as FilterDTO[],
-		filters: [] as FilterDTO[],
 		tableName: "",
 		selectedColumns: [] as string[],
 		pagination: {
@@ -111,6 +110,7 @@ function App() {
 		}
 	})
 
+	const [filters, setFilters] = React.useState<FilterDTO[]>([]);
 	// const prevAppliedFilters = usePrevious(tableConfig.appliedFilters);
 
 	const [isCollapsed, setIsCollapsed] = useSearchParamsState<boolean>(
@@ -174,14 +174,14 @@ function App() {
 		id: string;
 		filter: FilterDTO;
 	}) => {
+		setFilters((prev) => prev.map((prevFilter) => {
+			if (prevFilter.id === id) {
+				return filter;
+			}
+			return prevFilter;
+		}));
 		setTableConfig((prev) => ({
 			...prev,
-			filters: prev.filters.map((prevFilter) => {
-				if (prevFilter.id === id) {
-					return filter;
-				}
-				return prevFilter;
-			}),
 			appliedFilters: prev.appliedFilters.map((prevFilter) => {
 				if (prevFilter.id === id) {
 					return filter;
@@ -192,19 +192,16 @@ function App() {
 	};
 
 	const onAddFilter = () => {
-		setTableConfig((prev) => ({
+		setFilters((prev) => ([
 			...prev,
-			filters: [
-				...prev.filters,
-				{ id: uuidv4(), columnId: null, filterOption: null, filterValue: [] },
-			] as FilterDTO[],
-		}));
+			{ id: uuidv4(), columnId: null, filterOption: null, filterValue: [] },
+		] as FilterDTO[]));
 	};
 
 	const onRemoveFilter = (id: string) => {
+		setFilters((prev) => prev.filter((filter) => filter.id !== id));
 		setTableConfig((prev) => ({
 			...prev,
-			filters: prev.filters.filter((filter) => filter.id !== id),
 			appliedFilters: prev.appliedFilters.filter((filter) => filter.id !== id),
 		}));
 	};
@@ -216,17 +213,16 @@ function App() {
 				filters: [],
 				appliedFilters: [
 					...prev.appliedFilters,
-					...prev.filters.filter(
+					...filters.filter(
 						(filter) =>
 							!!filter.columnId && !!filter.filterOption && !!filter.filterValue
 					),
 				]
 			}
+			setFilters([]);
 			return newState;
 	});
 	};
-
-	// console.log(prevAppliedFilters);
 
 	return (
 		<>
@@ -293,7 +289,7 @@ function App() {
 										);
 									})}
 									<Divider className="m-0" />
-									{tableConfig.filters.map((filter) => {
+									{filters.map((filter) => {
 										return (
 											<FilterDropdowns
 												key={filter.id}
@@ -307,31 +303,33 @@ function App() {
 									})}
 								</>
 							)}
-							<div className="w-full flex justify-end">
-								<Button
-									onClick={onAddFilter}
-									className="bg-[#ffffff]"
-									type="dashed"
-									icon={<PlusCircleOutlined />}
-									size="large"
-									disabled={isLoading || isFetching}
-								>
-									Add filter
-								</Button>
+							<div className="w-full flex gap-1 justify-end">
+								<div className="flex justify-end">
+									<Button
+										onClick={onAddFilter}
+										className="bg-[#ffffff]"
+										type="dashed"
+										icon={<PlusCircleOutlined />}
+										size="large"
+										disabled={isLoading || isFetching}
+									>
+										Add filter
+									</Button>
+								</div>
+								{ filters.length > 0 &&
+								<div className="flex justify-end">
+									<Button
+										className="bg-[#1677ff]"
+										size="large"
+										onClick={onFilter}
+										type="primary"
+										disabled={!data || isLoading || isFetching}
+										icon={<ArrowRightOutlined />}
+									>
+										Apply
+									</Button>
+								</div>}
 							</div>
-							{ tableConfig.filters.length > 0 &&
-							<div className="w-full flex justify-end">
-								<Button
-									className="bg-[#1677ff]"
-									size="large"
-									onClick={onFilter}
-									type="primary"
-									disabled={!data || isLoading || isFetching}
-									icon={<ArrowRightOutlined />}
-								>
-									Apply
-								</Button>
-							</div>}
 							<Divider className="m-0" />
 							<div className="w-full justify-end flex">
 								<Button

@@ -8,6 +8,7 @@ import {
 	Layout,
 	Pagination,
 	Select,
+	Spin,
 } from "antd";
 import React, { useRef } from "react";
 import {
@@ -23,6 +24,8 @@ import { downloadFile } from "./queries/download-file";
 import { useSearchParamsState } from "./hooks/use-search-params-state";
 import clsx from "clsx";
 import { Typography } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
+
 
 const { Sider, Content, Header, Footer } = Layout;
 
@@ -119,7 +122,7 @@ function App() {
 		false
 	);
 
-	const { data, isLoading, isSuccess, isFetching } = useQuery({
+	const { data, isLoading, isSuccess, isFetching, isInitialLoading } = useQuery({
 		...queryTable({
 			filters: Object.values(tableConfig.appliedFilters),
 			tableName: tableConfig.tableName,
@@ -385,7 +388,14 @@ function App() {
 								): (
 									<div className="w-full h-full flex items-center justify-center flex-col">
 										<Typography.Title>Welcome to TA Dashboard</Typography.Title>
-										<Typography.Paragraph>Please select the data</Typography.Paragraph>
+										{isInitialLoading ? (
+											<>
+												<Typography.Paragraph>Loading data...</Typography.Paragraph>
+												<Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+											</>
+										): (
+											<Typography.Paragraph>Please select the data</Typography.Paragraph>
+										)}
 									</div>
 								)}
 							</div>

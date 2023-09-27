@@ -18,6 +18,7 @@ buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con, c
 
   narrowedDt <- dt
   if(!is.null(columns) && length(columns) > 0 && all(columns %in% names(dt))) {
+    dt <- dt %>% relocate(any_of(columns))
     narrowedDt <- dt %>% select(any_of(columns))
   }
 

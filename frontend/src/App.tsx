@@ -23,6 +23,7 @@ import { downloadFile } from "./queries/download-file";
 import { useSearchParamsState } from "./hooks/use-search-params-state";
 import clsx from "clsx";
 
+
 const { Sider, Content, Header, Footer } = Layout;
 
 const FilterDropdowns = ({
@@ -82,6 +83,7 @@ const FilterDropdowns = ({
 				size="middle"
 				tokenSeparators={[",", " ", "\t"]}
 				disabled={isLoading}
+				allowClear
 			/>
 			<div className="w-min">
 				<Button
@@ -98,27 +100,18 @@ const FilterDropdowns = ({
 };
 
 function App() {
-	// const [appliedFilters, setAppliedFilters] = useSearchParamsState<FilterDTO[]>(
-	// 	"filters",
-	// 	[]
-	// );
-	// const [filters, setFilters] = React.useState<FilterDTO[]>(appliedFilters);
-	// const [tableName, setTableName] = useSearchParamsState<string>("table", "");
-
 	const [tableConfig, setTableConfig] = useSearchParamsState('config', {
 		appliedFilters: [] as FilterDTO[],
 		filters: [] as FilterDTO[],
 		tableName: "",
 		selectedColumns: [] as string[],
+		pagination: {
+			page: 1,
+			perPage: 100,
+		}
 	})
-	const [pagination, setPagination] = useSearchParamsState("pagination", {
-		page: 1,
-		perPage: 100,
-	});
-	// const [selectedColumns, setSelectedColumns] = useSearchParamsState<string[] | null>(
-	// 	"columns",
-	// 	null,
-	// );
+
+	// const prevAppliedFilters = usePrevious(tableConfig.appliedFilters);
 
 	const [isCollapsed, setIsCollapsed] = useSearchParamsState<boolean>(
 		"collapsed",
@@ -129,13 +122,13 @@ function App() {
 		...queryTable({
 			filters: Object.values(tableConfig.appliedFilters),
 			tableName: tableConfig.tableName,
-			page: pagination.page,
-			perPage: pagination.perPage,
+			page: tableConfig.pagination.page,
+			perPage: tableConfig.pagination.perPage,
 			columns: tableConfig.selectedColumns,
 		}),
 		keepPreviousData: true,
 		refetchOnWindowFocus: false,
-		enabled: !!tableConfig.tableName && !!pagination.page && !!pagination.perPage,
+		enabled: !!tableConfig.tableName && !!tableConfig.pagination.page && !!tableConfig.pagination.perPage,
 	});
 	const { data: tablesList } = useQuery({
 		...queryTablesList,
@@ -146,16 +139,19 @@ function App() {
 	const refCount = useRef(count);
 
 	React.useEffect(() => {
-		if (count !== undefined && count !== null && refCount.current !== count) {
+		if (count !== undefined && count !== null && refCount.current && refCount.current !== count) {
 			refCount.current = count;
-			setPagination((currPagination) => {
-				if (currPagination.page > 1) {
-					return { ...currPagination, page: 1 };
-				}
-				return currPagination;
-			});
+			setTableConfig((currConfig) => ({
+				...currConfig,
+				pagination: {
+					...currConfig.pagination,
+					page: 1,
+				},
+			}));
+		} else if (!refCount?.current) {
+			refCount.current = count;
 		}
-	}, [count, setPagination]);
+	}, [count, setTableConfig]);
 
 	const onTableChange = (tableName: string) => {
 		setTableConfig((prev) => ({
@@ -164,8 +160,11 @@ function App() {
 			filters: [],
 			tableName,
 			selectedColumns: [],
+			pagination: {
+				...prev.pagination,
+				page: 1,
+			},
 		}));
-		// setPagination({ page: 1, perPage: 5 });
 	};
 
 	const onFilterChange = ({
@@ -178,6 +177,12 @@ function App() {
 		setTableConfig((prev) => ({
 			...prev,
 			filters: prev.filters.map((prevFilter) => {
+				if (prevFilter.id === id) {
+					return filter;
+				}
+				return prevFilter;
+			}),
+			appliedFilters: prev.appliedFilters.map((prevFilter) => {
 				if (prevFilter.id === id) {
 					return filter;
 				}
@@ -200,18 +205,28 @@ function App() {
 		setTableConfig((prev) => ({
 			...prev,
 			filters: prev.filters.filter((filter) => filter.id !== id),
+			appliedFilters: prev.appliedFilters.filter((filter) => filter.id !== id),
 		}));
 	};
 
 	const onFilter = () => {
-		setTableConfig((prev) => ({
-			...prev,
-			appliedFilters: prev.filters.filter(
-				(filter) =>
-					!!filter.columnId && !!filter.filterOption && !!filter.filterValue
-			),
-		}));
+		setTableConfig((prev) => {
+			const newState = {
+				...prev,
+				filters: [],
+				appliedFilters: [
+					...prev.appliedFilters,
+					...prev.filters.filter(
+						(filter) =>
+							!!filter.columnId && !!filter.filterOption && !!filter.filterValue
+					),
+				]
+			}
+			return newState;
+	});
 	};
+
+	// console.log(prevAppliedFilters);
 
 	return (
 		<>
@@ -255,14 +270,29 @@ function App() {
 											value={tableConfig.selectedColumns !== null ? tableConfig.selectedColumns : columns.map((column) => column.name)}
 											onChange={(columns) => setTableConfig((prev) => ({ ...prev, selectedColumns: columns }))}
 											className="w-full"
-											placeholder="Columns"
+											placeholder="Select columns"
 											options={columns.map((column) => ({
 												label: column.name,
 												value: column.id,
 											}))}
 											size="middle"
 											mode="multiple"
+											allowClear
 									/>
+									<Divider className="m-0" />
+									{tableConfig.appliedFilters.map((filter) => {
+										return (
+											<FilterDropdowns
+												key={filter.id}
+												onRemove={onRemoveFilter}
+												value={filter}
+												onChange={onFilterChange}
+												columns={columns}
+												isLoading={isLoading || isFetching}
+											/>
+										);
+									})}
+									<Divider className="m-0" />
 									{tableConfig.filters.map((filter) => {
 										return (
 											<FilterDropdowns
@@ -289,20 +319,20 @@ function App() {
 									Add filter
 								</Button>
 							</div>
+							{ tableConfig.filters.length > 0 &&
 							<div className="w-full flex justify-end">
 								<Button
 									className="bg-[#1677ff]"
 									size="large"
 									onClick={onFilter}
 									type="primary"
-									loading={isLoading || isFetching}
 									disabled={!data || isLoading || isFetching}
 									icon={<ArrowRightOutlined />}
 								>
 									Apply
 								</Button>
-							</div>
-							<Divider />
+							</div>}
+							<Divider className="m-0" />
 							<div className="w-full justify-end flex">
 								<Button
 									icon={<DownloadOutlined />}
@@ -312,8 +342,8 @@ function App() {
 											params: {
 												filters: Object.values(tableConfig.appliedFilters),
 												tableName: tableConfig.tableName,
-												page: pagination.page,
-												perPage: pagination.perPage,
+												page: tableConfig.pagination.page,
+												perPage: tableConfig.pagination.perPage,
 											},
 										})
 									}
@@ -333,13 +363,19 @@ function App() {
 												<div className="flex flex-col gap-1">
 													<Pagination
 														total={count}
-														pageSize={pagination.perPage}
+														pageSize={tableConfig.pagination.perPage}
 														disabled={isLoading}
 														onChange={(page, pageSize) => {
-															setPagination({ page, perPage: pageSize });
+															setTableConfig((prev) => ({
+																...prev,
+																pagination: {
+																	perPage: pageSize,
+																	page,
+																},
+															}));
 														}}
 														pageSizeOptions={[5, 10, 20, 50]}
-														current={pagination.page}
+														current={tableConfig.pagination.page}
 														className="w-full flex justify-center flex-nowrap"
 													/>
 												</div>

@@ -45,6 +45,8 @@ function(req) {
   withLocalDb(function(con) {
     table <- req$args$table
     filters <- req$args$filters
+    columns <- req$args$columns
+
     page <- as.integer(req$args$page)
     per_page <- as.integer(req$args$perPage)
     if (is.na(page) ||
@@ -63,15 +65,12 @@ function(req) {
                 temporary = FALSE)
       }
     })
-    queries <- buildQuery(table, filters, page, per_page, con)
+    queries <- buildQuery(table, filters, page, per_page, con, columns = columns)
     collectedData <- dbGetQuery(con, queries$paginated_dt)
     result = list(
       data = collectedData,
       count = queries$totalCount,
-      columns = names(collectedData) %>% purrr::map(function(name) {
-        list(id = name,
-             name = name)
-      })
+      columns = queries$columns
     )
     result
   })

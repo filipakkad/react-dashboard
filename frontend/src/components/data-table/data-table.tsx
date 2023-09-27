@@ -11,7 +11,7 @@ type DataTableProps = {
 export const DataTable = (props: DataTableProps) => {
   const { tableData, isLoading, footer } = props;
   const { data, columns } = tableData;
-  const preparedColumns: ColumnsType<Data> = columns.map((column) => ({
+  const preparedColumns: ColumnsType<Data> = columns.filter((column) => column.isSelected).map((column) => ({
     title: (
       <Typography.Text ellipsis={true}>
         {column.name}

@@ -1,6 +1,7 @@
 export type ColNames = {
   id: string,
   name: string,
+  isSelected: boolean,
 }[];
 export type Data = Record<ColNames[number]["id"], unknown>;
 
@@ -8,6 +9,7 @@ export type TableData = {
   data: Data[],
   columns: ColNames,
   count: number,
+  allColumns: string[],
 }
 
 export enum FilterOption {

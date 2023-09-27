@@ -1,4 +1,4 @@
-buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con) {
+buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con, columns = NULL) {
   dt <- tbl(con, tableName)
   purrr::pwalk(filters, function(...) {
     args <- list(...)
@@ -15,14 +15,27 @@ buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con) {
     }
   })
 
-  paginated_dt <- sql_render(dt)
+
+  narrowedDt <- dt
+  if(!is.null(columns) && length(columns) > 0 && all(columns %in% names(dt))) {
+    narrowedDt <- dt %>% select(any_of(columns))
+  }
+
+  paginated_dt <- sql_render(narrowedDt)
   if(!is.null(page) && !is.null(page_size)) {
     paginated_dt <- glue::glue("SELECT * FROM ({paginated_dt}) LIMIT {page_size} OFFSET {(page - 1) * page_size};")
   }
   return(list(
     paginated_dt=paginated_dt,
-    unpaginated_tbl=sql_render(dt),
-    totalCount=dt %>% summarise(n = n()) %>% pull(n)
+    unpaginated_tbl=sql_render(narrowedDt),
+    totalCount=dt %>% summarise(n = n()) %>% pull(n),
+    columns = purrr::map(names(dt), function(name) {
+      list(
+        id = name,
+        name = name,
+        isSelected = name %in% names(narrowedDt)
+      )
+    })
   ))
 }
 

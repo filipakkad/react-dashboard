@@ -13,7 +13,7 @@ export const useSearchParamsState = <T extends unknown | [] | undefined, >(
   const searchParamsState = acquiredSearchParam
   && (
     (typeof acquiredSearchParam === 'object' && Object.keys(acquiredSearchParam).length)
-    || typeof acquiredSearchParam !== 'object'
+    || typeof acquiredSearchParam !== 'object' || (Array.isArray(acquiredSearchParam))
   )
     ? acquiredSearchParam : defaultValue;
 

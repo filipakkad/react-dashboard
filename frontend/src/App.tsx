@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { queryTable } from "queries/fetch-table.query";
 import { DataTable } from "./components/data-table/data-table";
 import {
-	AutoComplete,
 	Button,
 	Divider,
 	Layout,
@@ -31,7 +30,7 @@ const FilterDropdowns = ({
 	onChange,
 	onRemove,
 	value,
-	isLoading
+	isLoading,
 }: {
 	columns: ColNames;
 	onChange: (filter: { id: string; filter: FilterDTO }) => void;
@@ -66,7 +65,10 @@ const FilterDropdowns = ({
 				placeholder="Filter type"
 				options={[
 					{ label: "contains exactly", value: FilterOption.containsExactly },
-					{ label: "not contains exactly", value: FilterOption.notContainsExactly },
+					{
+						label: "not contains exactly",
+						value: FilterOption.notContainsExactly,
+					},
 				]}
 				size="middle"
 				disabled={isLoading}
@@ -96,29 +98,44 @@ const FilterDropdowns = ({
 };
 
 function App() {
-	const [appliedFilters, setAppliedFilters] = useSearchParamsState<FilterDTO[]>(
-		"filters",
-		[]
-	);
-	const [filters, setFilters] = React.useState<FilterDTO[]>(appliedFilters);
-	const [tableName, setTableName] = useSearchParamsState<string>("table", "");
-	const [localTableName, setLocalTableName] = React.useState<string>(tableName || "");
+	// const [appliedFilters, setAppliedFilters] = useSearchParamsState<FilterDTO[]>(
+	// 	"filters",
+	// 	[]
+	// );
+	// const [filters, setFilters] = React.useState<FilterDTO[]>(appliedFilters);
+	// const [tableName, setTableName] = useSearchParamsState<string>("table", "");
+
+	const [tableConfig, setTableConfig] = useSearchParamsState('config', {
+		appliedFilters: [] as FilterDTO[],
+		filters: [] as FilterDTO[],
+		tableName: "",
+		selectedColumns: [] as string[],
+	})
 	const [pagination, setPagination] = useSearchParamsState("pagination", {
 		page: 1,
 		perPage: 100,
 	});
-	const [isCollapsed, setIsCollapsed] = useSearchParamsState<boolean>('collapsed', false);
+	// const [selectedColumns, setSelectedColumns] = useSearchParamsState<string[] | null>(
+	// 	"columns",
+	// 	null,
+	// );
+
+	const [isCollapsed, setIsCollapsed] = useSearchParamsState<boolean>(
+		"collapsed",
+		false
+	);
 
 	const { data, isLoading, isSuccess, isFetching } = useQuery({
 		...queryTable({
-			filters: Object.values(appliedFilters),
-			tableName,
+			filters: Object.values(tableConfig.appliedFilters),
+			tableName: tableConfig.tableName,
 			page: pagination.page,
 			perPage: pagination.perPage,
+			columns: tableConfig.selectedColumns,
 		}),
 		keepPreviousData: true,
 		refetchOnWindowFocus: false,
-		enabled: !!tableName && !!pagination.page && !!pagination.perPage,
+		enabled: !!tableConfig.tableName && !!pagination.page && !!pagination.perPage,
 	});
 	const { data: tablesList } = useQuery({
 		...queryTablesList,
@@ -132,23 +149,23 @@ function App() {
 		if (count !== undefined && count !== null && refCount.current !== count) {
 			refCount.current = count;
 			setPagination((currPagination) => {
-				if(currPagination.page > 1) {
-					return { ...currPagination, page: 1 }
+				if (currPagination.page > 1) {
+					return { ...currPagination, page: 1 };
 				}
 				return currPagination;
-			})
+			});
 		}
 	}, [count, setPagination]);
 
-	const resetFilters = () => {
-		setFilters([]);
-		setAppliedFilters([]);
-		setPagination({ page: 1, perPage: 5 });
-	};
-
 	const onTableChange = (tableName: string) => {
-		resetFilters();
-		setTableName(tableName);
+		setTableConfig((prev) => ({
+			...prev,
+			appliedFilters: [],
+			filters: [],
+			tableName,
+			selectedColumns: [],
+		}));
+		// setPagination({ page: 1, perPage: 5 });
 	};
 
 	const onFilterChange = ({
@@ -158,34 +175,42 @@ function App() {
 		id: string;
 		filter: FilterDTO;
 	}) => {
-		setFilters((prev) => {
-			return prev.map((prevFilter) => {
+		setTableConfig((prev) => ({
+			...prev,
+			filters: prev.filters.map((prevFilter) => {
 				if (prevFilter.id === id) {
 					return filter;
 				}
 				return prevFilter;
-			});
-		});
+			}),
+		}));
 	};
 
 	const onAddFilter = () => {
-		setFilters((prev) => {
-			const newState = [
-				...prev,
+		setTableConfig((prev) => ({
+			...prev,
+			filters: [
+				...prev.filters,
 				{ id: uuidv4(), columnId: null, filterOption: null, filterValue: [] },
-			];
-			return newState as FilterDTO[];
-		});
+			] as FilterDTO[],
+		}));
 	};
 
 	const onRemoveFilter = (id: string) => {
-		setFilters((prev) => {
-			return [...prev].filter((filter) => filter.id !== id);
-		});
+		setTableConfig((prev) => ({
+			...prev,
+			filters: prev.filters.filter((filter) => filter.id !== id),
+		}));
 	};
 
 	const onFilter = () => {
-		setAppliedFilters(filters.filter((filter) => !!filter.columnId && !!filter.filterOption && !!filter.filterValue));
+		setTableConfig((prev) => ({
+			...prev,
+			appliedFilters: prev.filters.filter(
+				(filter) =>
+					!!filter.columnId && !!filter.filterOption && !!filter.filterValue
+			),
+		}));
 	};
 
 	return (
@@ -193,12 +218,23 @@ function App() {
 			<Layout className="h-screen">
 				<Header className="flex w-full" />
 				<Layout>
-					<Sider collapsed={isCollapsed} onCollapse={() => setIsCollapsed((prev) => !prev)} collapsible width={500} className="h-full fixed left-0 top-0 bottom-0 overflow-auto" theme='light'>
-						<div className={clsx('flex flex-col gap-4 p-8 transition-all w-[500px] absolute right-0 top-0')}>
-							<AutoComplete
+					<Sider
+						collapsed={isCollapsed}
+						onCollapse={() => setIsCollapsed((prev) => !prev)}
+						collapsible={true}
+						width={500}
+						className="h-full fixed left-0 top-0 bottom-0 overflow-auto"
+						theme="light"
+					>
+						<div
+							className={clsx(
+								"flex flex-col gap-4 p-8 transition-all w-[500px] absolute right-0 top-0"
+							)}
+						>
+							<Select
+								showSearch
+								value={tableConfig.tableName}
 								onSelect={onTableChange}
-								value={localTableName}
-								onChange={(value) => setLocalTableName(value)}
 								className="w-full"
 								placeholder="Select table"
 								options={tablesList?.map((table) => ({
@@ -208,22 +244,39 @@ function App() {
 								size="large"
 								disabled={isFetching}
 								filterOption={(inputValue, option) =>
-									option!.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+									option!.value
+										.toUpperCase()
+										.indexOf(inputValue.toUpperCase()) !== -1
 								}
 							/>
-							{isSuccess && columns &&
-								filters.map((filter) => {
-									return (
-										<FilterDropdowns
-											key={filter.id}
-											onRemove={onRemoveFilter}
-											value={filter}
-											onChange={onFilterChange}
-											columns={columns}
-											isLoading={isLoading || isFetching}
-										/>
-									);
-								})}
+							{isSuccess && columns && (
+								<>
+									<Select
+											value={tableConfig.selectedColumns !== null ? tableConfig.selectedColumns : columns.map((column) => column.name)}
+											onChange={(columns) => setTableConfig((prev) => ({ ...prev, selectedColumns: columns }))}
+											className="w-full"
+											placeholder="Columns"
+											options={columns.map((column) => ({
+												label: column.name,
+												value: column.id,
+											}))}
+											size="middle"
+											mode="multiple"
+									/>
+									{tableConfig.filters.map((filter) => {
+										return (
+											<FilterDropdowns
+												key={filter.id}
+												onRemove={onRemoveFilter}
+												value={filter}
+												onChange={onFilterChange}
+												columns={columns}
+												isLoading={isLoading || isFetching}
+											/>
+										);
+									})}
+								</>
+							)}
 							<div className="w-full flex justify-end">
 								<Button
 									onClick={onAddFilter}
@@ -243,7 +296,7 @@ function App() {
 									onClick={onFilter}
 									type="primary"
 									loading={isLoading || isFetching}
-									disabled={isLoading || isFetching}
+									disabled={!data || isLoading || isFetching}
 									icon={<ArrowRightOutlined />}
 								>
 									Apply
@@ -257,8 +310,8 @@ function App() {
 									onClick={() =>
 										downloadFile({
 											params: {
-												filters: Object.values(appliedFilters),
-												tableName,
+												filters: Object.values(tableConfig.appliedFilters),
+												tableName: tableConfig.tableName,
 												page: pagination.page,
 												perPage: pagination.perPage,
 											},

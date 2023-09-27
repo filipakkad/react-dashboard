@@ -58,6 +58,7 @@ const FilterDropdowns = ({
 				}))}
 				size="middle"
 				disabled={isLoading}
+				showSearch
 			/>
 			<Select
 				value={value?.filterOption}
@@ -78,7 +79,7 @@ const FilterDropdowns = ({
 				value={value.filterValue}
 				onChange={(values) => onFilter({ filterValue: values })}
 				mode="tags"
-				className="w-full"
+				className="w-full overflow-hidden"
 				placeholder="Values"
 				size="middle"
 				tokenSeparators={[",", " ", "\t"]}

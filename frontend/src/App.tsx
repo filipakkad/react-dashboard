@@ -342,6 +342,7 @@ function App() {
 												tableName: tableConfig.tableName,
 												page: tableConfig.pagination.page,
 												perPage: tableConfig.pagination.perPage,
+												columns: tableConfig.selectedColumns,
 											},
 										})
 									}

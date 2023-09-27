@@ -83,9 +83,10 @@ function(req, res) {
   table <- req$args$params$table
   filters <- req$args$params$filters
   filename <- file.path(tempdir(), glue::glue("{table}.csv"))
+  columns <- req$args$params$columns
 
   dt <- withLocalDb(function(con) {
-    query <- buildQuery(table, filters, con = con)
+    query <- buildQuery(table, filters, con = con, columns = columns)
     dbGetQuery(con, query$unpaginated_tbl)
   })
 

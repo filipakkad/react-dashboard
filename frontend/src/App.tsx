@@ -22,7 +22,7 @@ import { queryTablesList } from "./queries/fetch-table-list.query";
 import { downloadFile } from "./queries/download-file";
 import { useSearchParamsState } from "./hooks/use-search-params-state";
 import clsx from "clsx";
-
+import { Typography } from 'antd';
 
 const { Sider, Content, Header, Footer } = Layout;
 
@@ -103,7 +103,7 @@ const FilterDropdowns = ({
 function App() {
 	const [tableConfig, setTableConfig] = useSearchParamsState('config', {
 		appliedFilters: [] as FilterDTO[],
-		tableName: "",
+		tableName: undefined as string | undefined,
 		selectedColumns: [] as string[],
 		pagination: {
 			page: 1,
@@ -159,7 +159,7 @@ function App() {
 			...prev,
 			appliedFilters: [],
 			filters: [],
-			tableName,
+			tableName: tableName || "",
 			selectedColumns: [],
 			pagination: {
 				...prev.pagination,
@@ -228,7 +228,7 @@ function App() {
 	return (
 		<>
 			<Layout className="h-screen">
-				<Header className="flex w-full" />
+				<Header className="flex w-full bg-[rgba(24,141,138,1)]" />
 				<Layout>
 					<Sider
 						collapsed={isCollapsed}
@@ -352,9 +352,9 @@ function App() {
 						</div>
 					</Sider>
 					<Layout>
-						<Content className="overflow-auto bg-gray-300">
+						<Content className="overflow-auto bg-gray-300/30">
 							<div className="w-full flex justify-between p-12 gap-8 h-full">
-								{data && (
+								{data ? (
 									<div className="flex flex-col items-center w-full gap-4 h-full">
 										<DataTable
 											isLoading={isLoading || isFetching}
@@ -382,10 +382,19 @@ function App() {
 											}
 										/>
 									</div>
+								): (
+									<div className="w-full h-full flex items-center justify-center flex-col">
+										<Typography.Title>Welcome to TA Dashboard</Typography.Title>
+										<Typography.Paragraph>Please select the data</Typography.Paragraph>
+									</div>
 								)}
 							</div>
 						</Content>
-						<Footer style={{ textAlign: "center" }}>Gen Corporation</Footer>
+						<Footer style={{ textAlign: "center" }} className="">
+							<Typography.Text>
+									@2023 Data Science
+							</Typography.Text>
+						</Footer>
 					</Layout>
 				</Layout>
 			</Layout>

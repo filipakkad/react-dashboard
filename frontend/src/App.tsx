@@ -1,21 +1,16 @@
 import "./App.css";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryTable } from "queries/fetch-table.query";
 import { DataTable } from "./components/data-table/data-table";
-import {
-	Button,
-	Divider,
-	Layout,
-	Pagination,
-	Select,
-	Spin,
-} from "antd";
+import { Avatar, Button, Divider, Layout, Pagination, Select, Spin } from "antd";
 import React, { useRef } from "react";
 import {
-	PlusCircleOutlined,
-	CloseCircleOutlined,
-	DownloadOutlined,
-	ArrowRightOutlined,
+  PlusCircleOutlined,
+  CloseCircleOutlined,
+  DownloadOutlined,
+  ArrowRightOutlined,
+  LoadingOutlined,
+	UserOutlined
 } from "@ant-design/icons";
 import { ColNames, FilterDTO, FilterOption } from "./types";
 import { v4 as uuidv4 } from "uuid";
@@ -23,8 +18,9 @@ import { queryTablesList } from "./queries/fetch-table-list.query";
 import { downloadFile } from "./queries/download-file";
 import { useSearchParamsState } from "./hooks/use-search-params-state";
 import clsx from "clsx";
-import { Typography } from 'antd';
-import { LoadingOutlined } from '@ant-design/icons';
+import { Typography } from "antd";
+import { queryUserInfo } from "./queries/fetch-user-info.query";
+
 
 
 const { Sider, Content, Header, Footer } = Layout;
@@ -49,7 +45,7 @@ const FilterDropdowns = ({
 	};
 
 	return (
-		<div className="flex gap-2 h-fit w-full justify-between">
+		<div className="flex gap-2 h-fit w-full justify-between flex-wrap">
 			<Select
 				value={value?.columnId}
 				onChange={(column) => onFilter({ columnId: column })}
@@ -102,39 +98,43 @@ const FilterDropdowns = ({
 		</div>
 	);
 };
-
 function App() {
-	const [tableConfig, setTableConfig] = useSearchParamsState('config', {
+	const [tableConfig, setTableConfig] = useSearchParamsState("config", {
 		appliedFilters: [] as FilterDTO[],
 		tableName: undefined as string | undefined,
 		selectedColumns: [] as string[],
 		pagination: {
 			page: 1,
 			perPage: 100,
-		}
-	})
+		},
+	});
 
 	const [filters, setFilters] = React.useState<FilterDTO[]>([]);
-	// const prevAppliedFilters = usePrevious(tableConfig.appliedFilters);
 
 	const [isCollapsed, setIsCollapsed] = useSearchParamsState<boolean>(
 		"collapsed",
 		false
 	);
 
-	const { data, isLoading, isSuccess, isFetching, isInitialLoading } = useQuery({
-		...queryTable({
-			filters: Object.values(tableConfig.appliedFilters),
-			tableName: tableConfig.tableName,
-			page: tableConfig.pagination.page,
-			perPage: tableConfig.pagination.perPage,
-			columns: tableConfig.selectedColumns,
-		}),
-		keepPreviousData: true,
-		refetchOnWindowFocus: false,
-		enabled: !!tableConfig.tableName && !!tableConfig.pagination.page && !!tableConfig.pagination.perPage,
-	});
-	const { data: tablesList } = useQuery({
+	const { data, isLoading, isSuccess, isFetching, isInitialLoading } = useQuery(
+		{
+			...queryTable({
+				filters: Object.values(tableConfig.appliedFilters),
+				tableName: tableConfig.tableName,
+				page: tableConfig.pagination.page,
+				perPage: tableConfig.pagination.perPage,
+				columns: tableConfig.selectedColumns,
+			}),
+			keepPreviousData: true,
+			refetchOnWindowFocus: false,
+			enabled:
+				!!tableConfig.tableName &&
+				!!tableConfig.pagination.page &&
+				!!tableConfig.pagination.perPage,
+		}
+	);
+
+	const { data: tablesList, isLoading: areTablesLoading } = useQuery({
 		...queryTablesList,
 		refetchOnWindowFocus: false,
 		keepPreviousData: true,
@@ -142,8 +142,15 @@ function App() {
 	const { columns, count } = data || {};
 	const refCount = useRef(count);
 
+	const { data: userInfo } = useQuery(queryUserInfo)
+
 	React.useEffect(() => {
-		if (count !== undefined && count !== null && refCount.current && refCount.current !== count) {
+		if (
+			count !== undefined &&
+			count !== null &&
+			refCount.current &&
+			refCount.current !== count
+		) {
 			refCount.current = count;
 			setTableConfig((currConfig) => ({
 				...currConfig,
@@ -178,12 +185,14 @@ function App() {
 		id: string;
 		filter: FilterDTO;
 	}) => {
-		setFilters((prev) => prev.map((prevFilter) => {
-			if (prevFilter.id === id) {
-				return filter;
-			}
-			return prevFilter;
-		}));
+		setFilters((prev) =>
+			prev.map((prevFilter) => {
+				if (prevFilter.id === id) {
+					return filter;
+				}
+				return prevFilter;
+			})
+		);
 		setTableConfig((prev) => ({
 			...prev,
 			appliedFilters: prev.appliedFilters.map((prevFilter) => {
@@ -196,10 +205,13 @@ function App() {
 	};
 
 	const onAddFilter = () => {
-		setFilters((prev) => ([
-			...prev,
-			{ id: uuidv4(), columnId: null, filterOption: null, filterValue: [] },
-		] as FilterDTO[]));
+		setFilters(
+			(prev) =>
+				[
+					...prev,
+					{ id: uuidv4(), columnId: null, filterOption: null, filterValue: [] },
+				] as FilterDTO[]
+		);
 	};
 
 	const onRemoveFilter = (id: string) => {
@@ -221,21 +233,32 @@ function App() {
 						(filter) =>
 							!!filter.columnId && !!filter.filterOption && !!filter.filterValue
 					),
-				]
-			}
+				],
+			};
 			setFilters([]);
 			return newState;
-	});
+		});
 	};
 
+	const { mutate, isLoading: isDownloading } = useMutation(downloadFile)
+
+
 	return (
-		<>
-			<Layout className="h-screen">
-				<Header className="flex w-full bg-[rgba(24,141,138,1)]" />
+		<Layout className="h-screen">
+				<Header className="flex w-full bg-[rgba(24,141,138,1)]">
+					{userInfo?.userName && (
+						<div className="flex text-white w-full justify-end items-center gap-2 font-bold">
+						{userInfo?.userName}
+						<Avatar size={40} icon={<UserOutlined />} />
+						</div>
+					)}
+				</Header>
 				<Layout>
 					<Sider
 						collapsed={isCollapsed}
-						onCollapse={() => setIsCollapsed((prev) => !prev)}
+						onCollapse={() => {
+							setIsCollapsed((prev) => !prev)
+						}}
 						collapsible={true}
 						width={500}
 						className="h-full fixed left-0 top-0 bottom-0 overflow-auto"
@@ -248,6 +271,7 @@ function App() {
 						>
 							<Select
 								showSearch
+								loading={areTablesLoading}
 								value={tableConfig.tableName}
 								onSelect={onTableChange}
 								className="w-full"
@@ -258,26 +282,35 @@ function App() {
 								}))}
 								size="large"
 								disabled={isFetching}
+								notFoundContent={areTablesLoading ? <div className="flex h-24 items-center justify-center"><Spin /></div> : undefined}
 								filterOption={(inputValue, option) =>
 									option!.value
 										.toUpperCase()
 										.indexOf(inputValue.toUpperCase()) !== -1
 								}
 							/>
+
 							{isSuccess && columns && (
 								<>
 									<Select
-											value={tableConfig.selectedColumns !== null ? tableConfig.selectedColumns : columns.map((column) => column.name)}
-											onChange={(columns) => setTableConfig((prev) => ({ ...prev, selectedColumns: columns }))}
-											className="w-full"
-											placeholder="Select columns"
-											options={columns.map((column) => ({
-												label: column.name,
-												value: column.id,
-											}))}
-											size="middle"
-											mode="multiple"
-											allowClear
+										value={
+											tableConfig.selectedColumns ?? columns.map((column) => column.name)
+										}
+										onChange={(columns) =>
+											setTableConfig((prev) => ({
+												...prev,
+												selectedColumns: columns,
+											}))
+										}
+										className="w-full"
+										placeholder="Select columns"
+										options={columns.map((column) => ({
+											label: column.name,
+											value: column.id,
+										}))}
+										size="middle"
+										mode="multiple"
+										allowClear
 									/>
 									<Divider className="m-0" />
 									{tableConfig.appliedFilters.map((filter) => {
@@ -320,27 +353,29 @@ function App() {
 										Add filter
 									</Button>
 								</div>
-								{ filters.length > 0 &&
-								<div className="flex justify-end">
-									<Button
-										className="bg-[#1677ff]"
-										size="large"
-										onClick={onFilter}
-										type="primary"
-										disabled={!data || isLoading || isFetching}
-										icon={<ArrowRightOutlined />}
-									>
-										Apply
-									</Button>
-								</div>}
+								{filters.length > 0 && (
+									<div className="flex justify-end">
+										<Button
+											className="bg-[#1677ff]"
+											size="large"
+											onClick={onFilter}
+											type="primary"
+											disabled={!data || isLoading || isFetching}
+											icon={<ArrowRightOutlined />}
+										>
+											Apply
+										</Button>
+									</div>
+								)}
 							</div>
 							<Divider className="m-0" />
 							<div className="w-full justify-end flex">
 								<Button
 									icon={<DownloadOutlined />}
-									disabled={isLoading || isFetching}
+									disabled={isLoading || isFetching || isDownloading}
+									loading={isDownloading}
 									onClick={() =>
-										downloadFile({
+										mutate({
 											params: {
 												filters: Object.values(tableConfig.appliedFilters),
 												tableName: tableConfig.tableName,
@@ -355,60 +390,65 @@ function App() {
 						</div>
 					</Sider>
 					<Layout>
-						<Content className="overflow-auto bg-gray-300/30">
-							<div className="w-full flex justify-between p-12 gap-8 h-full">
+					<Content className="overflow-auto bg-gray-300/30">
+							<div className="w-full flex justify-between px-12 py-2 gap-8 h-full items-center">
 								{data ? (
 									<div className="flex flex-col items-center w-full gap-4 h-full">
-										<DataTable
-											isLoading={isLoading || isFetching}
-											tableData={data}
-											footer={
-												<div className="flex flex-col gap-1">
-													<Pagination
-														total={count}
-														pageSize={tableConfig.pagination.perPage}
-														disabled={isLoading}
-														onChange={(page, pageSize) => {
-															setTableConfig((prev) => ({
-																...prev,
-																pagination: {
-																	perPage: pageSize,
-																	page,
-																},
-															}));
-														}}
-														pageSizeOptions={[5, 10, 20, 50]}
-														current={tableConfig.pagination.page}
-														className="w-full flex justify-center flex-nowrap"
-													/>
-												</div>
-											}
-										/>
-									</div>
-								): (
+											<DataTable
+												isLoading={isLoading || isFetching}
+												tableData={data}
+												footer={
+													<div className="flex flex-col gap-1">
+														<Pagination
+															total={count}
+															pageSize={tableConfig.pagination.perPage}
+															disabled={isLoading}
+															onChange={(page, pageSize) => {
+																setTableConfig((prev) => ({
+																	...prev,
+																	pagination: {
+																		perPage: pageSize,
+																		page,
+																	},
+																}));
+															}}
+															pageSizeOptions={[5, 10, 20, 50]}
+															current={tableConfig.pagination.page}
+															className="w-full flex justify-center flex-nowrap"
+														/>
+													</div>
+												}
+											/>
+										</div>
+								) : (
 									<div className="w-full h-full flex items-center justify-center flex-col">
 										<Typography.Title>Welcome to TA Dashboard</Typography.Title>
 										{isInitialLoading ? (
 											<>
-												<Typography.Paragraph>Loading data...</Typography.Paragraph>
-												<Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+												<Typography.Paragraph>
+													Loading data...
+												</Typography.Paragraph>
+												<Spin
+													indicator={
+														<LoadingOutlined style={{ fontSize: 48 }} spin />
+													}
+												/>
 											</>
-										): (
-											<Typography.Paragraph>Please select the data</Typography.Paragraph>
+										) : (
+											<Typography.Paragraph>
+												Please select the data
+											</Typography.Paragraph>
 										)}
 									</div>
 								)}
 							</div>
 						</Content>
 						<Footer style={{ textAlign: "center" }} className="">
-							<Typography.Text>
-									@2023 Data Science
-							</Typography.Text>
+							<Typography.Text>@2023 Data Science</Typography.Text>
 						</Footer>
 					</Layout>
 				</Layout>
 			</Layout>
-		</>
 	);
 }
 

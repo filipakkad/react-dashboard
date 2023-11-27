@@ -25,7 +25,7 @@ export const DataTable = (props: DataTableProps) => {
 
   return (
     <Table
-      className='h-full'
+      className='h-min overflow-hidden'
       scroll={{ scrollToFirstRowOnChange: true, y: 'calc(100vh - 20rem)' }}
       footer={() => footer}
       loading={isLoading}

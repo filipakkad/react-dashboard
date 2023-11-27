@@ -1,60 +1,37 @@
-buildQuery <- function(tableName, filters, page = NULL, page_size = NULL, con, columns = NULL) {
-  dt <- tbl(con, tableName)
-  purrr::pwalk(filters, function(...) {
-    args <- list(...)
-    columnId <- args$columnId
-    filterOption <- args$filterOption
-    filterValue <- args$filterValue
+buildQuery <- function(schema_name, table_name, filters, page = NULL, page_size = NULL, columns = NULL) {
+  columns_query <- if_else(length(columns) > 0, paste0(columns, collapse=","), "*")
+  conditions <- if_else(length(filters) > 0, {
+    result <- purrr::pmap_chr(filters, function(...) {
+      args <- list(...)
+      col_id <- args$columnId
+      filter_option <- args$filterOption
+      filter_values <- paste0("'",args$filterValue,"'", collapse = ",")
+      inOrNot = if_else(filter_option == "notContainsExactly", "NOT IN", "IN")
+      glue::glue("{col_id} {inOrNot} ({filter_values})")
+    }) %>% paste0(collapse = " AND ")
+    glue::glue(" where {result}")
+  }, "")
 
-    if(columnId %in% names(dt) && length(filterValue) > 0) {
-      if(filterOption == "notContainsExactly") {
-        dt <<- dt %>% dplyr::filter(!(!!sym(columnId) %in% filterValue))
-      } else if(filterOption == "containsExactly") {
-        dt <<- dt %>% dplyr::filter((!!sym(columnId) %in% filterValue))
-      }
-    }
-  })
-
-
-  narrowedDt <- dt
-  if(!is.null(columns) && length(columns) > 0 && all(columns %in% names(dt))) {
-    dt <- dt %>% relocate(any_of(columns))
-    narrowedDt <- dt %>% select(any_of(columns))
-  }
-
-  paginated_dt <- sql_render(narrowedDt)
-  if(!is.null(page) && !is.null(page_size)) {
-    paginated_dt <- glue::glue("SELECT * FROM ({paginated_dt}) LIMIT {page_size} OFFSET {(page - 1) * page_size};")
-  }
-  return(list(
-    paginated_dt=paginated_dt,
-    unpaginated_tbl=sql_render(narrowedDt),
-    totalCount=dt %>% summarise(n = n()) %>% pull(n),
-    columns = purrr::map(names(dt), function(name) {
-      list(
-        id = name,
-        name = name,
-        isSelected = name %in% names(narrowedDt)
-      )
-    })
-  ))
+  pagination <- if(!is.null(page_size) && !is.null(page)) glue::glue("LIMIT {page_size} OFFSET {(page - 1) * page_size}") else ""
+  list(
+    select = glue::glue("SELECT {columns_query} FROM {schema_name}.{table_name} {conditions} {pagination}"),
+    conditions = conditions
+  )
 }
 
-withDbConnection <- function(cb) {
-  # Establish the database connection
-  con <- dbConnect(RSQLite::SQLite(), "db/local_server_db.sqlite")
-  result = cb(con)
-  on.exit({
-    dbDisconnect(con)
+withWorkspaceClient <- async(function(req, cb) {
+  client <- wc$WorkspaceClient(host="https://genmab-dev.cloud.databricks.com", token=req$session$creds$access_token)
+  warehouses <- client$warehouses$list()
+  await(cb(client,  warehouses[[1]]$id))
+})
+
+dt_list_to_df <- function(dt_list, col_names) {
+  dt <- tibble()
+  purrr::map_df(dt_list, function(x) {
+    x[sapply(x, is.null)] <- NA
+    values <- unlist(x)
+    names(values) <- col_names
+    values
   })
-  return(result)
 }
 
-withLocalDb <- function(cb) {
-  con <- dbConnect(RSQLite::SQLite(), "db/local_db.sqlite")
-  result = cb(con)
-  on.exit({
-    dbDisconnect(con)
-  })
-  return(result)
-}

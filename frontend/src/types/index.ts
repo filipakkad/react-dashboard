@@ -17,6 +17,8 @@ export enum FilterOption {
   notContainsExactly = "notContainsExactly",
 }
 
+export type ChartData = Record<string, Array<unknown>>;
+
 export type FilterDTO = {
   id: string,
 } & {
@@ -28,5 +30,9 @@ export type FilterDTO = {
 export type PaginationDTO = {
   page: number,
   perPage: number,
+}
+
+export type UserInfo = {
+  userName: string;
 }
 

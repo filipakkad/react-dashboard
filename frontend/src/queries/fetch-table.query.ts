@@ -9,5 +9,5 @@ const fetchTable = async ({ filters, tableName, page, perPage, columns }: { filt
 
 export const queryTable = ({filters, tableName, page, perPage, columns } : { filters : FilterDTO[], tableName?: string, page: number, perPage: number, columns: string[] | null }) => ({
   queryFn: async () => fetchTable({ filters, tableName, page, perPage, columns }),
-  queryKey: ['table', page, perPage, tableName, ...objectFiltersToStringArray(filters), ...[columns || []]],
+  queryKey: ['table', page, perPage, tableName , ...objectFiltersToStringArray(filters), ...[columns || []]],
 })

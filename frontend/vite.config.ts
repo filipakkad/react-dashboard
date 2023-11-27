@@ -15,7 +15,7 @@ const getAlias = (items: string[]) =>
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), viteTsconfigPaths()],
-  // base: process.env.VITE_APP_ROOT_BASE_URL,
+  base: process.env.VITE_APP_ROOT_BASE_URL,
   resolve: {
     alias: [
       ...getAlias(["queries"]),

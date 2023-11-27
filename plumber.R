@@ -14,7 +14,7 @@ future::plan("multisession", workers = 1) # a worker for each core
 
 source("./R/helpers.R")
 
-schema_name <- "gmb_tempus"
+schema_name <- Sys.getenv('SCHEMA_NAME')
 
 #* @filter cors
 cors <- function(req, res) {
